@@ -36,6 +36,7 @@
 //
 void pollInterrupts(void);
 static int scheduler(void);
+void assignTime(int, int);
 static int dispatcher(void);
 
 //static void keyboard_isr(void);
@@ -97,7 +98,7 @@ struct pqueue rq;							// ready priority queue
 // 1. Init OS
 // 2. Define reset longjmp vector
 // 3. Define global system semaphores
-// 4. Create CLI task
+// 4. Create CLI tasknextTaskIndex
 // 5. Enter scheduling/idle loop
 //
 int main(int argc, char* argv[])
@@ -164,7 +165,7 @@ int main(int argc, char* argv[])
 		// check for character / timer interrupts
 		pollInterrupts();
 
-		// schedule highest priority ready task
+		// schedule highest priority ready tasknextTaskIndex
 		if ((curTask = scheduler()) < 0) continue;
 
 		// dispatch curTask, quit OS if negative return
@@ -191,7 +192,7 @@ static int scheduler()
 
 	// ?? WARNING: You must NEVER call swapTask() from within this function
 	// ?? or any function that it calls.  This is because swapping is
-	// ?? handled entirely in the swapTask function, which, in turn, may
+	// ?? handled entirely in the swapTask function, whnextTaskIndexich, in turn, may
 	// ?? call this function.  (ie. You would create an infinite loop.)
 
 	// ?? Implement a round-robin, preemptive, prioritized scheduler.
@@ -217,6 +218,15 @@ static int scheduler()
 	else if(scheduler_mode == 1){
 		if(!empty(&rq)){
 			nextTask = dequeue(&rq, -1);
+			nextTaskIndex = nextTask.tid;nextTaskIndex;
+			if(tcb[nextTaskIndex].taskTime > 0){
+				tcb[nextTaskIndex].taskTime--;
+				enqueue(&rq, nextTask);
+			}
+		}
+		else{
+			//run reassignment algorithm
+			assignTime(0, FSS_TOT_TIME);
 		}
 	}
 	// schedule next task
@@ -231,7 +241,25 @@ static int scheduler()
 	return nextTaskIndex;*/
 } // end scheduler
 
+void assignTime(int tid, int remainingTime){
+	int childCount = 0;
+	struct pqElement task;
+	int children[MAX_TASKS];
+	for(int i = 0; i < MAX_TASKS; i++){
+		if(tcb[i].name && (tcb[i].parent == tid)){
+			children[childCount] = i;
+			childCount++;
+		}
+	}
+	tcb[tid].taskTime = (remainingTime / (childCount + 1)) + (remainingTime % (childCount + 1));
+	task.tid = tid;
+	task.priority = tcb[tid].priority;
+	enqueue(&rq, task);
+	for(int i = 0; i < childCount; i++){
+		assignTime(i, remainingTime / (childCount + 1));
+	}
 
+}
 
 // **********************************************************************
 // **********************************************************************

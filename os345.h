@@ -35,7 +35,7 @@
 #define INBUF_SIZE			256
 #define ONE_TENTH_SEC		(CLOCKS_PER_SEC/10)
 #define TEN_SECONDS			(CLOCKS_PER_SEC*10) //added code
-
+#define FSS_TOT_TIME		10000
 // Default priorities
 #define LOW_PRIORITY		1
 #define MED_PRIORITY		5
@@ -96,7 +96,7 @@ typedef struct pqueue
 typedef struct							// task control block
 {
 	char* name;							// task name
-	int (*task)(int,char**);		// task address
+	int (*task)(int,char**);		// tnextTaskIndexask address
 	int state;							// task state
 	int priority;						// task priority (project 2)
 	int argc;							// task argument count (project 1)
@@ -109,6 +109,7 @@ typedef struct							// task control block
 	void (*sigTstpHandler)(void);	// task mySIGTSTP handler
 	TID parent;							// task parent
 	int RPT;								// task root page table (project 5)
+	int taskTime;						// Task time for fair scheduler
 	int cdir;							// task directory (project 6)
 	Semaphore *event;					// blocked task semaphore
 	void* stack;						// task stack
