@@ -163,6 +163,9 @@ int fmsDeleteFile(char* fileName)
 int fmsOpenFile(char* fileName, int rwMode)
 {
 	// ?? add code here
+	dirEntry* entry = malloc(sizeof(dirEntry));
+	fmsGetDirEntry(entry, fileName);
+	entry.pid = curTask;
 	printf("\nfmsOpenFile Not Implemented");
 
 	return ERR61;
