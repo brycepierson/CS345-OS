@@ -301,6 +301,9 @@ int P6_mount(int argc, char* argv[])		// mount RAM disk
 	printf("\n         Sectors/track: %d", bootSector.BPB_SecPerTrk);		// Sectors per cylindrical track
 	printf("\n          Heads/volume: %d", bootSector.BPB_NumHeads);		// Heads per volume (2 for 1.4Mb 3.5" floppy)
 	printf("\n        FAT-32 sectors: %ld", bootSector.BPB_HiddSec);		// Hidden sectors (0 for non-partitioned media)
+  for(int i = 0; i < NFILES; i++){
+    OFTable[i].name[0] = '\0';
+  }
 	return 0;
 } // end P6_mount
 
@@ -1809,7 +1812,7 @@ int fmsMount(char* fileName, void* ramDisk)
 // This function loads a RAM disk image from a file.
 //	The parameter fileName is the file path name of the disk image.
 //	The parameter ramDisk is a pointer to a character array whose
-//    size is equal to a 1.4 mb floppy disk (2849 ´ 512 bytes).
+//    size is equal to a 1.4 mb floppy disk (2849 ï¿½ 512 bytes).
 //	Return 0 for success, otherwise, return the error number
 {
    FILE* fp;
@@ -1838,7 +1841,7 @@ int fmsUnMount(char* fileName, void* ramDisk)
 // This function unloads your Project 5 RAM disk image to file computer file.
 // The parameter fileName is the file path name of the disk image.
 // The pointer parameter ramDisk points to a character array whose size is equal to a 1.4
-// mb floppy disk (2849 ´ 512 bytes).
+// mb floppy disk (2849 ï¿½ 512 bytes).
 // Return 0 for success; otherwise, return the error number.
 {
 	diskMounted = 0;							// unmount disk
@@ -1927,4 +1930,3 @@ unsigned short getFatEntry(int FATindex, unsigned char* FATtable)
 
 // ***************************************************************************************
 // ***************************************************************************************
-

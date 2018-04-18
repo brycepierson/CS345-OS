@@ -89,9 +89,10 @@ extern int curTask;							// current task #
 int fmsCloseFile(int fileDescriptor)
 {
 	// ?? add code here
-	printf("\nfmsCloseFile Not Implemented");
+	if(OFTable[fileDescriptor].name[0] == '\0') return ERR63;
+	OFTable[fileDescriptor].name[0] = '\0';
 
-	return ERR63;
+	return 0;
 } // end fmsCloseFile
 
 
@@ -163,15 +164,48 @@ int fmsDeleteFile(char* fileName)
 int fmsOpenFile(char* fileName, int rwMode)
 {
 	// ?? add code here
-	dirEntry* entry = malloc(sizeof(dirEntry));
-	fmsGetDirEntry(entry, fileName);
-	entry.pid = curTask;
-	printf("\nfmsOpenFile Not Implemented");
+	int err = 0;
+	int fd = 0;
+	FCB* fdEntry;
+	DirEntry* entry = malloc(sizeof(DirEntry));
+	printf("err = %d", err);
+	err = fmsGetDirEntry(fileName, entry);
 
-	return ERR61;
+	fd = getEmptyOFTableEntry();
+
+	fdEntry = &OFTable[fd];
+	strcpy(fdEntry->name, entry->name);
+	strcpy(fdEntry->extension, entry->extension);
+	fdEntry->attributes = entry->attributes;
+	fdEntry->directoryCluster = CDIR;
+	fdEntry->startCluster = entry->startCluster;
+	fdEntry->currentCluster = 0;
+	if(rwMode == 1) fdEntry->fileSize = 0;
+	else fdEntry->fileSize = entry->fileSize;
+	printf("\nfile size: %d", entry->fileSize);
+	fdEntry->pid = curTask;
+	fdEntry->mode = rwMode;
+	fdEntry->flags = 0;
+	if(rwMode != 2) fdEntry->fileIndex = 0;
+	else fdEntry->fileIndex = entry->fileSize;
+	printf("\nfd = %d", fd);
+	printf("\nfile name = %s", entry->name);
+
+
+	return fd;
 } // end fmsOpenFile
 
+int getEmptyOFTableEntry(){
+	for(int i = 0; i < NFILES; i++){
+		printf("entry %d: %s", i, (((OFTable[i]).name[0] == '\0')) ? "free" : "occupied");
+		if(OFTable[i].name[0] == '\0'){
+			printf("\nFound available slot: %d", i);
+			return i;
 
+		}
+	}
+	return ERR70;
+}
 
 // ***********************************************************************
 // ***********************************************************************
@@ -186,9 +220,44 @@ int fmsOpenFile(char* fileName, int rwMode)
 int fmsReadFile(int fileDescriptor, char* buffer, int nBytes)
 {
 	// ?? add code here
-	printf("\nfmsReadFile Not Implemented");
-
-	return ERR63;
+	int error, nextCluster;
+	FCB* fdEntry;
+	int numBytesRead = 0;
+	unsigned int bytesLeft, bufferIndex;
+	fdEntry = &OFTable[fileDescriptor];
+	if(fdEntry->name[0] == 0) return ERR63;
+	if ((fdEntry->mode == 1) || (fdEntry->mode == 2)) return ERR85;
+	while (nBytes > 0){
+		if(fdEntry->fileSize == fdEntry->fileIndex)
+			return (numBytesRead ? numBytesRead : ERR66);
+		bufferIndex = fdEntry->fileIndex % BYTES_PER_SECTOR;
+		if((bufferIndex == 0) && (fdEntry->fileIndex || !fdEntry->currentCluster)){
+			if(fdEntry->currentCluster == 0){
+				if(fdEntry->startCluster == 0) return ERR66;
+				nextCluster = fdEntry->startCluster;
+				fdEntry->fileIndex = 0;
+			}
+			else{
+				nextCluster = getFatEntry(fdEntry->currentCluster, FAT1);
+				if (nextCluster == FAT_EOC) return numBytesRead;
+			}
+			if(fdEntry->flags & BUFFER_ALTERED){
+				if((error = fmsWriteSector(fdEntry->buffer, C_2_S(fdEntry->currentCluster)))) return error;
+				fdEntry->flags &= ~BUFFER_ALTERED;
+			}
+			if((error = fmsReadSector(fdEntry->buffer, C_2_S(nextCluster)))) return error;
+			fdEntry->currentCluster = nextCluster;
+		}
+		bytesLeft = BYTES_PER_SECTOR - bufferIndex;
+		if(bytesLeft > nBytes) bytesLeft = nBytes;
+		if(bytesLeft > (fdEntry->fileSize - fdEntry->fileIndex)) bytesLeft = fdEntry->fileSize - fdEntry->fileIndex;
+		memcpy(buffer, &fdEntry->buffer[bufferIndex], bytesLeft);
+		fdEntry->fileIndex += bytesLeft;
+		numBytesRead += bytesLeft;
+		buffer += bytesLeft;
+		nBytes -= bytesLeft;
+	}
+	return numBytesRead;
 } // end fmsReadFile
 
 
