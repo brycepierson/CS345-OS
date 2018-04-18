@@ -116,7 +116,7 @@ int runClock(int notme)
 						{
 							//swap the page out to swap space
 							//printf("\nclockUPT is not referenced: %#06x", clockUPT);
-							printf("\ndecided to swap out frame at : %#06x", clockUPT);
+							//printf("\ndecided to swap out frame at : %#06x", clockUPT);
 							if(PAGED(upte2))
 							{
 								purpose = PAGE_OLD_WRITE;
