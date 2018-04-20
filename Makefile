@@ -1,7 +1,7 @@
 #*******VARIABLES*******
 
 cc=gcc
-compflags=-c
+compflags=-c -g
 
 #***********************
 

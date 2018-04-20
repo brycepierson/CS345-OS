@@ -217,8 +217,8 @@ int P4_virtualMemStats(int argc, char* argv[])
 	int nextPage = accessPage(0, 0, PAGE_GET_SIZE);
 	int pageReads = accessPage(0, 0, PAGE_GET_READS);
 	int pageWrites = accessPage(0, 0, PAGE_GET_WRITES);
+	memAccess = memHits + memPageFaults;
 	double missRate = (memAccess)?(((double)memPageFaults)/(double)memAccess)*100.0:0;
-
 	printf("\nMemory accesses = %d", memAccess);
 	printf("\n           hits = %d", memHits);
 	printf("\n         faults = %d", memPageFaults);

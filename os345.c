@@ -216,18 +216,19 @@ static int scheduler()
 		return nextTaskIndex;
 	}
 	else if(scheduler_mode == 1){
-		if(!empty(&rq)){
-			nextTask = dequeue(&rq, -1);
-			nextTaskIndex = nextTask.tid;nextTaskIndex;
-			if(tcb[nextTaskIndex].taskTime > 0){
-				tcb[nextTaskIndex].taskTime--;
-				enqueue(&rq, nextTask);
-			}
-		}
-		else{
-			//run reassignment algorithm
+		if(empty(&rq)){
+			//printf("\nrq empty");
 			assignTime(0, FSS_TOT_TIME);
 		}
+		nextTask = dequeue(&rq, -1);
+		nextTaskIndex = nextTask.tid;
+		if(tcb[nextTaskIndex].taskTime > 0){
+			//printf("\ntask:%d time:%d", nextTaskIndex, tcb[nextTaskIndex].taskTime);
+			//print(&rq);
+			tcb[nextTaskIndex].taskTime--;
+			enqueue(&rq, nextTask);
+		}
+		return nextTaskIndex;
 	}
 	// schedule next task
 	/*
@@ -256,7 +257,7 @@ void assignTime(int tid, int remainingTime){
 	task.priority = tcb[tid].priority;
 	enqueue(&rq, task);
 	for(int i = 0; i < childCount; i++){
-		assignTime(i, remainingTime / (childCount + 1));
+		assignTime(children[i], remainingTime / (childCount + 1));
 	}
 
 }
@@ -493,8 +494,9 @@ int full(pqueue *p)
 void enqueue(pqueue *p, pqElement x)
 {
     int i;
-    if(full(p))
-        printf("\nOverflow");
+    if(full(p)){
+        //printf("\nOverflow");
+			}
     else
     {
         if(empty(p))
@@ -546,6 +548,7 @@ struct pqElement dequeue(pqueue *p, int tid)
 		else
 		{
 			bool found = TRUE;
+			if(empty(p)) found = FALSE;
 			int i = p->rear;
 			while(p->data[i].tid != tid)
 			{

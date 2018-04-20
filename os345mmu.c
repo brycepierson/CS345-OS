@@ -98,9 +98,12 @@ int runClock(int notme){
 						else{
 							if(PAGED(MEMWORD(clockUPT + 1))){purpose = PAGE_OLD_WRITE;}
 							else{purpose = PAGE_NEW_WRITE;}
-							swap_page = accessPage(SWAPPAGE(MEMWORD(clockUPT + 1)), FRAME(MEMWORD(clockUPT)), purpose);
-							MEMWORD(clockUPT + 1) = SET_PAGED(swap_page);
-							MEMWORD(clockUPT) = CLEAR_DEFINED(MEMWORD(clockUPT));
+							if(PAGED(MEMWORD(clockUPT + 1) && !DIRTY(MEMWORD(clockUPT + 1)))){;}
+							else{
+								swap_page = accessPage(SWAPPAGE(MEMWORD(clockUPT + 1)), FRAME(MEMWORD(clockUPT)), purpose);
+								MEMWORD(clockUPT + 1) = SET_PAGED(CLEAR_DIRTY(swap_page));
+								MEMWORD(clockUPT) = CLEAR_DEFINED(MEMWORD(clockUPT));
+							}
 							frame = FRAME(MEMWORD(clockUPT));
 							clockUPT += 2;
 							return frame;
@@ -113,9 +116,12 @@ int runClock(int notme){
 					//swap upt
 					if(PAGED(MEMWORD(clockRPT + 1))){purpose = PAGE_OLD_WRITE;}
 					else{purpose = PAGE_NEW_WRITE;}
-					swap_page = accessPage(SWAPPAGE(MEMWORD(clockRPT + 1)), FRAME(MEMWORD(clockRPT)), purpose);
-					MEMWORD(clockRPT + 1) = SET_PAGED(swap_page);
-					MEMWORD(clockRPT) = CLEAR_DEFINED(MEMWORD(clockRPT));
+					if(PAGED(MEMWORD(clockRPT + 1)) && !DIRTY(clockRPT + 1)){;}
+					else{
+						swap_page = accessPage(SWAPPAGE(MEMWORD(clockRPT + 1)), FRAME(MEMWORD(clockRPT)), purpose);
+						MEMWORD(clockRPT + 1) = SET_PAGED(CLEAR_DIRTY(swap_page));
+						MEMWORD(clockRPT) = CLEAR_DEFINED(MEMWORD(clockRPT));
+					}
 					frame = FRAME(MEMWORD(clockRPT));
 					clockRPT += 2;
 					return frame;
@@ -187,10 +193,12 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 	if (DEFINED(rpte1))
 	{	// rpte defined
 		//printf("rpte defined: %#06x", rpte1);
+		memHits++;
 	}
 	else	// rpte undefined	1. get a UPT frame from memory (may have to free up frame)
 	{	//     			2. if paged out (DEFINED) load swapped page into UPT frame
 		//        			else initialize UPT
+		memPageFaults++;
 		frame = getFrame(-1);
 		rpte1 = SET_DEFINED(frame);
 		if (PAGED(rpte2))	// UPT frame paged out - read from SWAPPAGE(rpte2) into frame
@@ -207,9 +215,11 @@ unsigned short int *getMemAdr(int va, int rwFlg)
 	upta = (FRAME(rpte1)<<6) + UPTI(va);  upte1 = MEMWORD(upta);  upte2 = MEMWORD(upta+1);		if (DEFINED(upte1))
 	{	// upte defined
 		//printf("upte defined: %#06x", upte1);
+		memHits++;
 	}
 	else	// upte undefined	1. get a physical frame (may have to free up frame) (x3000 - limit) (192 - 1023)
 	{	//     			2. if paged out (DEFINED) load swapped page into physical frame
+		memPageFaults++;
 		frame = getFrame(FRAME(rpte1));
 		upte1 = SET_DEFINED(frame);
 		if(PAGED(upte2))
@@ -276,6 +286,7 @@ int getAvailableFrame()
 	{	if (fmask & 0x0001)
 		{  fmask = 0x8000;				// move to next work
 			adr++;
+
 			data = MEMWORD(adr);
 		}
 		else fmask = fmask >> 1;		// next frame

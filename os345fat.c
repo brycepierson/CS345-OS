@@ -170,9 +170,9 @@ int fmsOpenFile(char* fileName, int rwMode)
 	DirEntry* entry = malloc(sizeof(DirEntry));
 	printf("err = %d", err);
 	err = fmsGetDirEntry(fileName, entry);
-
+	if(err < 0) return err;
 	fd = getEmptyOFTableEntry();
-
+	if(fd < 0) return fd;
 	fdEntry = &OFTable[fd];
 	strcpy(fdEntry->name, entry->name);
 	strcpy(fdEntry->extension, entry->extension);
@@ -276,7 +276,8 @@ int fmsSeekFile(int fileDescriptor, int index)
 	printf("\nfmsSeekFile Not Implemented");
 
 	return ERR63;
-} // end fmsSeekFile
+} // end fmsSeekFile	return ERR63;
+
 
 
 
@@ -293,6 +294,43 @@ int fmsWriteFile(int fileDescriptor, char* buffer, int nBytes)
 {
 	// ?? add code here
 	printf("\nfmsWriteFile Not Implemented");
-
-	return ERR63;
+	int error, nextCluster;
+	FCB* fdEntry;
+	int numBytesWritten = 0;
+	unsigned int bytesLeft, bufferIndex;
+	fdEntry = &OFTable[fileDescriptor];
+	if(fdEntry->name[0] == 0) return ERR63;
+	if ((fdEntry->mode == 0)) return ERR85;
+	while (nBytes > 0){
+		if(fdEntry->fileSize == fdEntry->fileIndex)
+			return (numBytesWritten ? numBytesWritten : ERR66);
+		bufferIndex = fdEntry->fileIndex % BYTES_PER_SECTOR;
+		if((bufferIndex == 0) && (fdEntry->fileIndex || !fdEntry->currentCluster)){
+			if(fdEntry->currentCluster == 0){
+				if(fdEntry->startCluster == 0) return ERR66;
+				nextCluster = fdEntry->startCluster;
+				fdEntry->fileIndex = 0;
+			}
+			else{
+				nextCluster = getFatEntry(fdEntry->currentCluster, FAT1);
+				if (nextCluster == FAT_EOC) return numBytesWritten;
+			}
+			if(fdEntry->flags & BUFFER_ALTERED){
+				if((error = fmsWriteSector(fdEntry->buffer, C_2_S(fdEntry->currentCluster)))) return error;
+				fdEntry->flags &= ~BUFFER_ALTERED;
+			}
+			if((error = fmsWriteSector(fdEntry->buffer, C_2_S(nextCluster)))) return error;
+			fdEntry->currentCluster = nextCluster;
+		}
+		bytesLeft = BYTES_PER_SECTOR - bufferIndex;
+		if(bytesLeft > nBytes) bytesLeft = nBytes;
+		if(bytesLeft > (fdEntry->fileSize - fdEntry->fileIndex)) bytesLeft = fdEntry->fileSize - fdEntry->fileIndex;
+		memcpy(buffer, &fdEntry->buffer[bufferIndex], bytesLeft);
+		fdEntry->fileIndex += bytesLeft;
+		fdEntry->fileSize += bytesLeft;
+		numBytesWritten += bytesLeft;
+		buffer += bytesLeft;
+		nBytes -= bytesLeft;
+	}
+	return numBytesWritten;
 } // end fmsWriteFile

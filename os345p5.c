@@ -38,6 +38,7 @@ Semaphore* parentDead;				// parent dead
 extern Semaphore* tics1sec;			// 1 second semaphore
 extern int curTask;					// current task #
 extern int scheduler_mode;			// scheduler mode
+extern struct pqueue rq;
 long int group_count[NUM_PARENTS];	// parent group counters
 int num_siblings[NUM_PARENTS];		// number in each group
 
@@ -61,6 +62,10 @@ int P5_project5(int argc, char* argv[])		// project 5
 	{
 		scheduler_mode = atoi(argv[1]);
 		printf("\nScheduler Mode = %d (%s)", scheduler_mode, scheduler_mode ? "FSS" : "RR");
+		if(scheduler_mode == 1){
+			initialize(&rq);
+			printf("\nReady Queue initialized");
+		}
 		return 0;
 	}
 
@@ -194,17 +199,18 @@ int groupReportTask(int argc, char* argv[])
 
 		sum = 0;
 		for (i = 0; i < NUM_PARENTS; ++i) sum += group_count[i];
+		if(sum == 0){;}
+		else{
+			printf("\nGroups:");
+			for (i=0; i<NUM_PARENTS; i++)
+			{
+	//			printf("%10ld", group_count[i]);
+				printf("%10ld (%d%%)", group_count[i], (group_count[i] * 100) / sum);
+				group_count[i] = 0;
+			}
 
-		printf("\nGroups:");
-		for (i=0; i<NUM_PARENTS; i++)
-		{
-//			printf("%10ld", group_count[i]);
-			printf("%10ld (%d%%)", group_count[i], (group_count[i] * 100) / sum);
-			group_count[i] = 0;
+			count = NUM_REPORT_SECONDS;
 		}
-
-		count = NUM_REPORT_SECONDS;
 	}
 	return 0;
 } // end groupReportTask
-

@@ -71,6 +71,7 @@ int createTask(char* name,						// task name
 			tcb[tid].state = S_NEW;			// NEW task state
 			tcb[tid].priority = priority;	// task priority
 			tcb[tid].parent = curTask;		// parent
+			if(tid == 0) tcb[tid].parent = -1;
 			tcb[tid].argc = argc;			// argument count
 
 			// ?? malloc new argv parameters
